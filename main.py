@@ -2,6 +2,7 @@ import flask
 from flask import render_template
 from flask import request
 from flask import url_for
+from flask import jsonify
 import uuid
 
 import json
@@ -16,6 +17,7 @@ from dateutil import tz  # For interpreting local times
 # OAuth2  - Google library implementation for convenience
 from oauth2client import client
 import httplib2   # used in oauth2 flow
+
 
 # Google API for services 
 from apiclient import discovery
@@ -195,6 +197,54 @@ def setrange():
       daterange_parts[0], daterange_parts[1], 
       flask.session['begin_date'], flask.session['end_date']))
     return flask.redirect(flask.url_for("choose"))
+
+@app.route('/getcals', methods = ["POST"])
+def getcals():
+	flask.session['cals'] = request.form.getlist('cal_select')
+	app.logger.debug(flask.session['cals'])
+	return flask.render_template('index.html')
+
+@app.route('/timerange', methods = ['POST'])
+def timerange():
+	app.logger.debug("entering timerange")
+	start = request.form.get('start_time')
+	end = request.form.get('end_time')
+	flask.session['start_time'] = interpret_time(start)
+	flask.session['end'] = interpret_time(end)
+	
+	#where i will find the busy times 
+	ret_events = []
+	gcal_service = get_gcal_service(valid_credentials())
+	page_token = None
+	
+	for cal in flask.session['cals']:
+		events = gcal_service.events().list(
+		calendarId = cal,
+		singleEvents = True,
+		maxResults = 100,
+		timeMin = (flask.session['begin_date']).format('YYYY-MM-DD HH:mm:ss ZZ'),
+		timeMax = (next_day(flask.session['end_date'])).format('YYYY-MM-DD HH:mm:ss ZZ'),
+		pageToken = page_token,).execute()
+		app.logger.debug(events)
+		app.logger.debug(len(events))
+		
+		#now you have events in the date range
+		for event in events['items']:
+			ev_start = event['start']['dateTime']
+			app.logger.debug(ev_start)
+			ev_end = event['end']['dateTime']
+			if 'transparency' in event:
+				continue
+			if (ev_start< flask.session['start_time'] and ev_end <= flask.session['start_time']):
+				ret_events.append([event['summary'],event['start']['dateTime'],event['end']['dateTime']])
+			elif (ev_start >= flask.session['end_time'] and ev_end > flask.session['end_time']):
+				ret_events.append([event['summary'],event['start']['dateTime'],event['end']['dateTime']])
+			else:
+				break
+			
+	return jsonify(result = ret_events)
+	#return flask.render_template('index.html')
+	
 
 ####
 #
