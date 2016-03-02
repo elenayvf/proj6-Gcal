@@ -3,6 +3,7 @@ from flask import render_template
 from flask import request
 from flask import url_for
 from flask import jsonify
+
 import uuid
 
 import json
@@ -13,6 +14,9 @@ import arrow # Replacement for datetime, based on moment.js
 import datetime # But we still need time
 from dateutil import tz  # For interpreting local times
 
+#free_times
+from free_time_calc import Appt
+from free_time_calc import Agenda
 
 # OAuth2  - Google library implementation for convenience
 from oauth2client import client
@@ -207,16 +211,14 @@ def getcals():
 @app.route('/timerange', methods = ['POST'])
 def timerange():
 	app.logger.debug("entering timerange")
-	start = request.form.get('start_time')
-	end = request.form.get('end_time')
-	flask.session['start_time'] = interpret_time(start)
-	flask.session['end'] = interpret_time(end)
-	
-	#where i will find the busy times 
-	ret_events = []
+	flask.session['start_time'] = interpret_time(request.form.get('start_time'))
+	flask.session['end_time'] = interpret_time(request.form.get('end_time'))
+
 	gcal_service = get_gcal_service(valid_credentials())
 	page_token = None
 	
+	
+	agenda = Agenda() #busy time agenda
 	for cal in flask.session['cals']:
 		events = gcal_service.events().list(
 		calendarId = cal,
@@ -225,25 +227,27 @@ def timerange():
 		timeMin = (flask.session['begin_date']).format('YYYY-MM-DD HH:mm:ss ZZ'),
 		timeMax = (next_day(flask.session['end_date'])).format('YYYY-MM-DD HH:mm:ss ZZ'),
 		pageToken = page_token,).execute()
-		app.logger.debug(events)
-		app.logger.debug(len(events))
 		
-		#now you have events in the date range
+		#adds events in 'Appt' format to an "agenda" 
 		for event in events['items']:
-			ev_start = event['start']['dateTime']
-			app.logger.debug(ev_start)
-			ev_end = event['end']['dateTime']
 			if 'transparency' in event:
 				continue
-			if (ev_start< flask.session['start_time'] and ev_end <= flask.session['start_time']):
-				ret_events.append([event['summary'],event['start']['dateTime'],event['end']['dateTime']])
-			elif (ev_start >= flask.session['end_time'] and ev_end > flask.session['end_time']):
-				ret_events.append([event['summary'],event['start']['dateTime'],event['end']['dateTime']])
-			else:
-				break
-			
-	return jsonify(result = ret_events)
-	#return flask.render_template('index.html')
+			#appointment
+			ev_start = arrow.get(event['start']['dateTime'])
+			ev_end = arrow.get(event['end']['dateTime'])
+			new_apt = Appt(ev_start, ev_end,event['summary'])
+			agenda.append(new_apt)
+		
+	#created an agenda containing all of the google calendar events that fall into the 
+	#date range 
+	
+	#Complement busy_time agenda with a huge 'freetime' appt that spans the whole date 
+	#range
+	comp_agenda = agenda.complement(date_range_appt())
+	final_agenda = comp_agenda.intersect(free_block_agenda())
+	
+	return jsonify(result = final_agenda.to_dict())
+	
 	
 
 ####
@@ -251,6 +255,43 @@ def timerange():
 #   Initialize session variables 
 #
 ####
+def free_block_agenda():
+	"""
+	returns an agenda of appointments of the selected start time and end time from the 
+	html form '/timerange' for every day in the date range also selected by the user
+	"""
+	free_block_agenda = Agenda()
+	arrow_start = arrow.get(flask.session['begin_date'])
+	arrow_end = arrow.get(flask.session['end_date']) 
+	
+	arrow_start.replace(hour = 0)
+	arrow_end.replace(hour = 0)
+	
+	start_time = arrow.get(flask.session['start_time'])
+	end_time = arrow.get(flask.session['end_time'])
+	
+	for r in arrow.Arrow.span_range('day',arrow_start,arrow_end):
+		rstart = r[0]
+		rend = r[1]
+		rstart = rstart.replace(hour= start_time.hour, minute = start_time.minute)
+		rend = rend.replace(hour = end_time.hour, minute = end_time.minute)
+		desc = "freeblock"
+		free_block_agenda.append(Appt(rstart,rend,desc))
+	return free_block_agenda
+		
+def date_range_appt():
+	'''
+	returns an appointment that spans the entire date range from user input 
+	'''
+	start = arrow.get(flask.session['begin_date'])
+	end = arrow.get(flask.session['end_date'])
+	start = start.replace(hour = 0)
+	end = end.replace(hour = 0)
+	desc = "freeblock"
+	
+	return Appt(start, end, desc)
+	
+		
 
 def init_session_values():
     """
