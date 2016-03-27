@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Available Times</title>
+
+  <!-- 'viewport' is used by bootstrap to respond to device size -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Javascript:  JQuery from a content distribution network (CDN) -->
+  <script
+     src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
+  </script>
+
+  <!-- Bootstrap includes javascript and css  (must follow jquery) -->
+  <link rel="stylesheet"
+   href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+   <script
+    src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js">
+</script>
+
+   <!-- Our own style sheet -->
+   <link rel="stylesheet" href="/static/css/memos.css" />
+
+
+</head>
+<body>
+<div class="container">
+<h1>Available Times</h1>
+
+{% if session.appointments %}
+    {% for appt in session.appointments %}
+  <form method= "POST" action = "_delete" >
+  <div class="appt">
+  
+  <div class="row">
+  <div class="col-md-2">
+   	{{ appt.begin }} - {{ appt.end}}
+  </div>
+  <div class="col-md-10">
+	<input type = 'hidden' name = 'text'> {{ appt.desc }} </input>
+  </div>
+  <input type='hidden' name = 'ObjectID' value= " {{appt._id}} ">
+  </input>
+
+  </div> <!-- row -->
+  </div> <!-- memo -->
+  </form>
+  {% endfor %}
+{% else %}
+  <p>No appointments for you. </p>
+{% endif %}  
+
+
+<script>

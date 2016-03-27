@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html lang="en"> <head>
-<title>Crate Appointment</title>
+<title>Response</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link rel="stylesheet" type="text/css"
@@ -34,7 +34,7 @@
 <body>
 <div class="container">
 
-<h1>Create Appointment</h1>
+<h1>You've Been Invited to a Meeting between {{session.begin_date}} - {{ session.end_date}}</h1>
 
 
 {% with messages = get_flashed_messages() %}
@@ -47,32 +47,8 @@
   {% endif %}
 {% endwith %}
 
-<h2>Date range</h2>
-  <form action="/setrange" method="post">
-  <input type="text" name="daterange" size="12"
-    {% if session.daterange is defined %}
-         value="{{session.daterange}}"
-    {% endif %}
-     class="pull-down"
-     style="background: #fff; cursor: pointer; padding: 5px 10px;
-     border: 1px solid #ccc; width: 12em" >
-
-<script type="text/javascript">
-$(function() {
-    $('input[name="daterange"]').daterangepicker();
-});
-</script>
-<br /><input type="submit" value="Choose" />
-</form>
-
-    <!--
-    Show the calendar list (if we have it).  This will need to be turned into
-    a form from which calendars can be picked. Up to three entries are
-    shown in each row (but the order is across then down; I would
-    prefer down then across). 
-    -->
-<h2>Google Calendars</h2>
-<form action="/getcals_index" method="post">
+<h2>Intersect your Google Calendars to find a Good Appointment Time</h2>
+<form action="/getcals_invited" method="post">
 {% if session.calendars is defined  %}
   <div class="row">
   {% for cal in session.calendars if cal.selected %}
@@ -89,15 +65,9 @@ $(function() {
 {% endif %}
 <input type="submit" value="Choose" />
 </form>
-
-<h2>Time Range</h2>
-	<form action="/timerange" method="post"> 
-	<input type=text name= "start_time"> to - <input type=text name = "end_time">
-	<input type="submit" value="Choose" />
-	</form>
-	
-
-  </div>  <!-- container (for bootstrap) -->
+<form action="/intersect" method="post">
+<input type="submit" value="Intersect Calendars" />
+</form>
   <script>
   $(document).ready(function(){
   	$.getJSON("/timerange",

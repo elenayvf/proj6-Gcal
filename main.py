@@ -26,6 +26,11 @@ import httplib2   # used in oauth2 flow
 # Google API for services 
 from apiclient import discovery
 
+# Mongo database
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+
+
 ###
 # Globals
 ###
@@ -36,6 +41,14 @@ SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 CLIENT_SECRET_FILE = CONFIG.GOOGLE_LICENSE_KEY  ## You'll need this
 APPLICATION_NAME = 'MeetMe class project'
 
+try: 
+	dbclient = MongoClient(CONFIG.MONGO_URL)
+	db = dbclient.appts
+	collection = db.dated
+
+except:
+	print("Failure opening database.  Is Mongo running? Correct password?")
+	
 #############################
 #
 #  Pages (routed from URLs)
@@ -202,11 +215,17 @@ def setrange():
       flask.session['begin_date'], flask.session['end_date']))
     return flask.redirect(flask.url_for("choose"))
 
-@app.route('/getcals', methods = ["POST"])
-def getcals():
+@app.route('/getcals_index', methods = ["POST"])
+def getcals_index():
 	flask.session['cals'] = request.form.getlist('cal_select')
 	app.logger.debug(flask.session['cals'])
 	return flask.render_template('index.html')
+	
+@app.route('/getcals_invited', methods = ["POST"])
+def getcals_invited():
+	flask.session['cals'] = request.form.getlist('cal_select')
+	app.logger.debug(flask.session['cals'])
+	return flask.render_template('invited.html')
 
 @app.route('/timerange', methods = ['POST'])
 def timerange():
@@ -245,16 +264,71 @@ def timerange():
 	#range
 	comp_agenda = agenda.complement(date_range_appt())
 	final_agenda = comp_agenda.intersect(free_block_agenda())
+	result = final_agenda.to_dict()
 	
-	return jsonify(result = final_agenda.to_dict())
+	for a in result:
+		collection.insert({"type": "appt", "begin": a['begin'], "end": a['end'],"desc": a['desc']})
+	
+	flask.session['appointments'] = get_appts()
+	return flask.render_template("display.html")
+	
+@app.route('/intersect', methods=['POST'])	
+def intersect_cals():
+	gcal_service = get_gcal_service(valid_credentials())
+	page_token = None
 	
 	
+	agenda = Agenda() #busy time agenda
+	for cal in flask.session['cals']:
+		events = gcal_service.events().list(
+		calendarId = cal,
+		singleEvents = True,
+		maxResults = 100,
+		timeMin = (flask.session['begin_date']).format('YYYY-MM-DD HH:mm:ss ZZ'),
+		timeMax = (next_day(flask.session['end_date'])).format('YYYY-MM-DD HH:mm:ss ZZ'),
+		pageToken = page_token,).execute()
+		
+		#adds events in 'Appt' format to an "agenda" 
+		for event in events['items']:
+			if 'transparency' in event:
+				continue
+			#appointment
+			ev_start = arrow.get(event['start']['dateTime'])
+			ev_end = arrow.get(event['end']['dateTime'])
+			new_apt = Appt(ev_start, ev_end,event['summary'])
+			agenda.append(new_apt)
+	
+	comp_agenda = Agenda()		
+	for appt in flask.session['appointments']:
+		comp_appt = Appt(appt["begin"],appt["end"],appt["desc"])
+		comp_agenda.append(comp_appt)
+	
+	inverse_agenda = agenda.complement(date_range_appt())
+	final = inverse_agenda.intersect(comp_agenda)
+	result = final.to_dict()
+	
+	collection.remove({})
+	
+	for a in result:
+		collection.insert({"type": "appt", "begin": a['begin'], "end": a['end'],"desc": a['desc']})
 
+	flask.session['appointments'] = get_appts()
+	return flask.render_template("display.html")
 ####
 #
 #   Initialize session variables 
 #
 ####
+def get_appts():
+	records = [ ]
+	for record in collection.find( { "type": "appt" } ):
+		record['begin'] = str(record['begin'])
+		record['end'] = str(record['end'])
+		record['desc'] = str(record['desc'])
+		record['_id'] = str(record['_id'])
+		records.append(record)
+	return records 	
+	
 def free_block_agenda():
 	"""
 	returns an agenda of appointments of the selected start time and end time from the 
