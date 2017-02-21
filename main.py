@@ -43,7 +43,7 @@ APPLICATION_NAME = 'MeetMe class project'
 
 try: 
 	dbclient = MongoClient(CONFIG.MONGO_URL)
-	db = dbclient.appts
+	db = dbclient.gcal
 	collection = db.dated
 
 except:

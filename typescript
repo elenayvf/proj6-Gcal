@@ -1,0 +1,26 @@
+Script started on Sat Mar 26 09:21:58 2016
+[?1034hproj6-Gcal:elenavegafujioka$ ls -l
+total 152
+-rw-r--r--  1 elenavegafujioka  staff    374 Feb 13 11:40 CONFIG.base.py
+-rw-r--r--@ 1 elenavegafujioka  staff    381 Feb 14 13:26 CONFIG.py
+-rw-r--r--  1 elenavegafujioka  staff   8917 Feb 13 11:40 LICENSE
+-rw-r--r--  1 elenavegafujioka  staff   1620 Feb 13 11:40 Makefile
+-rw-r--r--  1 elenavegafujioka  staff   1678 Feb 13 11:40 README.md
+drwxr-xr-x  5 elenavegafujioka  staff    170 Mar  1 10:04 __pycache__
+-rw-r--r--  1 elenavegafujioka  staff    427 Feb 14 08:54 client_secret.json
+-rw-r--r--@ 1 elenavegafujioka  staff    419 Feb 16 12:10 client_secret_personal.json
+drwxr-xr-x  7 elenavegafujioka  staff    238 Mar 18 11:21 env
+-rw-r--r--@ 1 elenavegafujioka  staff   9572 Mar  1 10:04 free_time_calc.py
+-rw-r--r--@ 1 elenavegafujioka  staff  14585 Mar  1 10:21 main.py
+-rw-r--r--  1 elenavegafujioka  staff    291 Feb 13 11:40 requirements.txt
+drwxr-xr-x  5 elenavegafujioka  staff    170 Feb 13 11:41 static
+drwxr-xr-x  7 elenavegafujioka  staff    238 Mar  7 11:20 templates
+-rw-r--r--@ 1 elenavegafujioka  staff      0 Mar  1 17:35 test_suite.py
+-rw-r--r--@ 1 elenavegafujioka  staff    420 Feb 29 16:29 tester.py
+-rw-r--r--  1 elenavegafujioka  staff     43 Mar 26 09:21 typescript
+proj6-Gcal:elenavegafujioka$ ls -ld
+drwxr-xr-x  22 elenavegafujioka  staff  748 Mar 26 09:21 .
+proj6-Gcal:elenavegafujioka$ pyvenv-3.4 env
+proj6-Gcal:elenavegafujioka$ exit
+
+Script done on Sat Mar 26 09:22:34 2016
